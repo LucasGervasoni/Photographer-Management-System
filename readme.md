@@ -44,7 +44,7 @@ This project is designed to streamline the workflow of a photography business by
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/photographer-management-system.git
+   git clone https://github.com/LucasGervasoni/Photographer-Management-System.git
    cd photographer-management-system
    ```
 
@@ -62,15 +62,6 @@ This project is designed to streamline the workflow of a photography business by
    ```
    http://127.0.0.1:8000
    ```
-
----
-
-### 🗂️ **Roadmap**
-
-- Integration with external CRM systems.
-- Implementation of real-time notifications for uploads and downloads.
-- Advanced reporting and analytics for Admins.
-- Additional cloud provider options for file storage.
 
 ---
 
