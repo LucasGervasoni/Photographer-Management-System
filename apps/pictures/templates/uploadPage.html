@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title%}
+<title>Spotlight - Upload</title>
+{% endblock %}
+
+{% block content %}
+<style>
+
+.progress--card {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 320px;  /* Slightly increased width for better visibility */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Increased shadow opacity */
+    position: fixed;
+    bottom: 20px;  /* Moved to the bottom-right */
+    right: 20px;
+    z-index: 1000;
+    text-align: left; /* Left-aligned text for better readability */
+    font-family: Arial, sans-serif;
+}
+
+.progress--header {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.progress-file-list {
+    max-height: 200px; /* Adjust based on your preference */
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+/* Custom Scrollbar */
+.progress-file-list::-webkit-scrollbar {
+    width: 8px; /* Adjust the width to make it smaller */
+}
+
+/* Track of the scrollbar */
+.progress-file-list::-webkit-scrollbar-track {
+    background: #2c2c2c; /* Dark gray background */
+    border-radius: 10px; /* Rounded corners */
+}
+
+/* Handle of the scrollbar */
+.progress-file-list::-webkit-scrollbar-thumb {
+    background-color: #555; /* Dark gray scrollbar handle */
+    border-radius: 10px; /* Rounded scrollbar handle */
+    border: 2px solid #2c2c2c; /* Padding around the handle */
+}
+
+/* For Firefox (optional) */
+.progress-file-list {
+    scrollbar-width: thin; /* Make the scrollbar thin */
+    scrollbar-color: #555 #2c2c2c; /* Dark gray handle and track */
+}
+
+.file-item {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: #ffffff;
+}
+
+.file-item p {
+    margin: 0;
+}
+
+.progress {
+    height: 8px;
+    background-color: #555; /* Darker background for the progress bar */
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+.progress--bar {
+    height: 8px;
+    background-color: #4CAF50; /* Green color for progress */
+    border-radius: 4px;
+}
+
+#totalTimeRemaining {
+    font-size: 0.9rem;
+    color: #cfcfcf;
+    margin-top: 10px;
+}
+
+#uploadProgressCard p {
+    margin-bottom: 0; /* To avoid extra space */
+}
+
+.progress--footer p {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #cfcfcf;
+}
+
+    .help-img{
+        width: 340px; 
+        position: absolute; 
+        top: 10%; 
+        left: 0;
+    }
+
+    @media screen and (min-width:320px) and (max-width:767px){
+        .help-img{
+            display: none;
+        }
+    }
+
+    @media screen and (min-width:768px) and (max-width:1439px){
+        .help-img{
+            min-width: 200px;
+            width: 250px;
+            max-width: 320px;
+
+        }
+    }
+    @media screen and (min-width:1660px) and (max-width:2100px){
+        .help-img{
+            left: 10%;
+
+        }
+    }
+    @media screen and (min-width:2100px){
+        .help-img{
+            left: 20%;
+
+        }
+    }
+</style>
+
+<h2 class="mb-4 h5">Upload Images for {{ order }}</h2>
+
+<img class="help-img" src="{% static 'img/help-img.jpg' %}" alt="">
+<form id="uploadForm" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="d-flex flex-column w-80 mr-auto ml-auto align-items-center" style="max-width: 1200px;">
+        <div class="box__input mb-4 align-self-center">
+            <input class="fileInput" type="file" accept="*" webkitdirectory directory name="image" multiple data-path>
+        </div>
+
+        <!-- Editor Note -->
+        <div class="form-group w-50">
+            <label for="id_editor_note">Editor Note:</label>
+            <textarea class="form-control" name="editor_note" id="id_editor_note" cols="40" rows="3"></textarea>
+        </div>
+
+        <!-- Selected Service -->
+        <div class="form-group w-50">
+            <label for="id_services">Services:</label>
+            {{ group_form.services }}
+        </div>
+
+        <!-- 3D Scan URL -->
+        <div class="form-group w-50">
+            <label for="id_scan_url">3D Scan URL (if applicable):</label>
+            <input class="form-control" type="url" name="scan_url" placeholder="Enter URL for 3d scan" maxlength="200" id="id_scan_url" disabled="">
+        </div>
+
+        <div class="d-flex flex-wrap w-50">
+            <!-- Photos Sent -->
+            <div class="form-group mr-2">
+                <label for="id_photos_sent">Assets to be uploaded:</label>
+                <input class="form-control" type="number" name="photos_sent" min="0" required="" id="id_photos_sent">
+            </div>
+
+            <!-- Photos Returned -->
+            <div class="form-group">
+                <label for="id_photos_returned">Assets to be returned:</label>
+                <input class="form-control" type="number" name="photos_returned" min="0" id="id_photos_returned">
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between w-50">
+            <a class="btn btn-info" href="{% url 'userOrders--page' %}">Back to Orders</a>
+            <button class="btn btn-success" type="submit">Upload</button>
+        </div>
+    </div>
+</form>
+
+<div id="uploadProgressCard" class="progress--card" style="position: fixed; bottom: 20px; right: 20px; width: 320px; display:none; background-color:#2e2e2e; color:white; border-radius: 8px; padding: 15px; z-index: 1000;">
+    <div class="progress--header" style="text-align: center; margin-bottom: 10px;">
+        <strong>Uploading <span id="currentFileCount">0</span> of <span id="totalFileCount">0</span> items</strong>
+        <p id="totalTimeRemaining">Calculating time...</p>
+    </div>
+    <div id="uploadList" class="progress-file-list" style="max-height: 300px; overflow-y: auto; margin-top: 10px;"></div>
+</div>
+
+
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var servicesField = document.getElementById('id_services');
+        var fileInput = document.querySelector('.fileInput');
+        var scanUrlField = document.getElementById('id_scan_url');
+        var assetsUploadedField = document.getElementById('id_photos_sent');
+        var uploadForm = document.getElementById('uploadForm');
+        var progressCard = document.getElementById('progressCard');
+        var progressBar = document.getElementById('progressBar');
+        var fileNameElement = document.getElementById('fileName');
+        var progressPercent = document.getElementById('progressPercent');
+        var retryLimit = 5;  // Set a retry limit
+        var baseTimeout = 60000; // Set a base timeout of 60 seconds
+        // New progress card variables
+        var uploadProgressCard = document.getElementById('uploadProgressCard');
+        var currentFileCount = document.getElementById('currentFileCount');
+        var totalFileCount = document.getElementById('totalFileCount');
+        var uploadList = document.getElementById('uploadList');
+        var totalTimeRemaining = document.getElementById('totalTimeRemaining');
+        var totalFiles; // Keep track of the total number of files
+        var startTime; // To calculate the remaining time
+
+        function updateFields() {
+            var selectedServices = Array.from(servicesField.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(checkbox => checkbox.value);
+            if (selectedServices.length === 0 || (selectedServices.includes('3d scan') && selectedServices.length === 1)) {
+                fileInput.disabled = true;
+                assetsUploadedField.required = false;
+            } else {
+                fileInput.disabled = false;
+                assetsUploadedField.required = true;
+            }
+            if (selectedServices.includes('3d scan')) {
+                scanUrlField.disabled = false;
+            } else {
+                scanUrlField.disabled = true;
+                scanUrlField.value = '';
+            }
+        }
+        servicesField.addEventListener('change', updateFields);
+        updateFields();
+
+        fileInput.addEventListener('change', function (event) {
+            var files = Array.from(fileInput.files);
+            var filteredFiles = files.filter(file => file.name !== '.DS_Store' && !file.name.endsWith('.BridgeSort'));
+            filteredFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+            var dataTransfer = new DataTransfer();
+            filteredFiles.forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
+        });
+
+        uploadForm.onsubmit = async function (event) {
+            event.preventDefault();
+            var formData = new FormData(uploadForm);
+            var files = Array.from(document.querySelector('.fileInput').files);
+            files = files.filter(file => file.name !== '.DS_Store');
+            files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+            var selectedServices = Array.from(servicesField.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(checkbox => checkbox.value);
+            if (selectedServices.includes('3d scan') && selectedServices.length === 1) {
+                if (scanUrlField.value === "") {
+                    alert('Please provide a valid 3D scan URL.');
+                    return;
+                }
+            } else {
+                if (files.length === 0) {
+                    alert('No files were selected.');
+                    return;
+                }
+            }
+            // Display new progress card
+            uploadProgressCard.style.display = 'block';
+            totalFiles = files.length; // Store total files count
+            totalFileCount.textContent = totalFiles; // Update the total file count in the progress card
+            currentFileCount.textContent = 0; // Reset current file count
+            startTime = Date.now(); // Start time for time estimation
+            uploadForm.querySelectorAll('input, button, textarea').forEach(function (element) {
+                element.disabled = true;
+            });
+            try {
+                if (files.length === 0) {
+                    try {
+                        await submitFormWithoutFiles(formData, uploadForm.action);
+                        showSuccessAlert();  // Redirect after success
+                    } catch (error) {
+                        alert(error.message || 'Error submitting form.');
+                    }
+                } else if (selectedServices.includes('3d scan') && selectedServices.length === 1) {
+                    formData.append('scan_url', scanUrlField.value);
+                    await uploadFileWithRetries(null, formData, uploadForm.action);
+                    showSuccessAlert();  // Redirect after success
+                } else {
+                    for (let i = 0; i < files.length; i++) {
+                        let file = files[i];
+                        let relativePath = file.webkitRelativePath 
+                            ? file.webkitRelativePath.replace(file.name, '') 
+                            : '';  
+                        formData.append('relative_path', relativePath);
+                        createFileItem(file.name, i); // Create file progress item in the card
+                        await uploadFileWithRetries(file, formData, uploadForm.action, i);
+                        formData.delete('relative_path');
+                    }
+                    showSuccessAlert();  // Redirect after success
+                }
+            } catch (error) {
+                alert(error.message || 'Error during upload.');
+            } finally {
+                uploadProgressCard.style.display = 'none'; // Hide the new progress card
+                uploadForm.querySelectorAll('input, button, textarea').forEach(function (element) {
+                    element.disabled = false;
+                });
+            }
+        };
+
+        function showSuccessAlert() {
+            // Redirection to the userOrders--page after successful upload
+            window.location.href = "{% url 'userOrders--page' %}";
+        }
+
+        // Create a new file item in the progress card
+        function createFileItem(fileName, fileId) {
+            var fileItem = document.createElement('div');
+            fileItem.classList.add('file-item');
+            fileItem.setAttribute('id', `fileItem-${fileId}`);
+            fileItem.innerHTML = `
+                <p>${fileName} <span id="fileStatus-${fileId}">0%</span></p>
+                <div class="progress">
+                    <div id="progressBar-${fileId}" class="progress--bar" style="width: 0%;"></div>
+                </div>
+            `;
+            uploadList.appendChild(fileItem);
+
+            // Scroll to the bottom of the file list whenever a new file is added
+            uploadList.scrollTop = uploadList.scrollHeight;
+        }
+
+        // Calculate the remaining time
+        function calculateRemainingTime() {
+            const uploadedFiles = parseInt(currentFileCount.textContent);
+            const elapsedTime = (Date.now() - startTime) / 1000; // in seconds
+            const avgTimePerFile = elapsedTime / uploadedFiles;
+            if (uploadedFiles > 0) {
+                const remainingFiles = totalFiles - uploadedFiles;
+                const estimatedTimeRemaining = remainingFiles * avgTimePerFile; // seconds remaining
+                const minutes = Math.floor(estimatedTimeRemaining / 60);
+                const seconds = Math.floor(estimatedTimeRemaining % 60);
+                totalTimeRemaining.textContent = `${minutes} minutes ${seconds} seconds remaining`;
+            } else {
+                totalTimeRemaining.textContent = 'Calculating time...';
+            }
+        }
+
+        async function uploadFileWithRetries(file, formData, actionUrl, fileId, retries = 0) {
+            try {
+                await uploadFileAsync(file, formData, actionUrl, fileId);
+            } catch (error) {
+                if (retries < retryLimit) {
+                    const delay = Math.pow(2, retries) * 1000; // Exponential backoff
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return uploadFileWithRetries(file, formData, actionUrl, fileId, retries + 1);
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        async function uploadFileAsync(file, formData, actionUrl, fileId) {
+            return new Promise((resolve, reject) => {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', actionUrl, true);
+                xhr.timeout = baseTimeout + (file ? (file.size / (1024 * 1024)) * 1000 : 0); 
+                xhr.upload.onprogress = function (event) {
+                    if (event.lengthComputable) {
+                        var percentComplete = Math.round((event.loaded / event.total) * 100);
+                        updateFileProgress(fileId, percentComplete);
+                    }
+                };
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        currentFileCount.textContent = parseInt(currentFileCount.textContent) + 1; // Increment file count
+                        calculateRemainingTime(); // Calculate the remaining time
+                        markFileComplete(fileId);
+                        resolve();
+                    } else {
+                        reject(new Error('Error during upload.'));
+                    }
+                };
+                xhr.onerror = function () {
+                    reject(new Error('Upload failed.'));
+                };
+                xhr.ontimeout = function () {
+                    reject(new Error('Upload timed out.'));
+                };
+                // Modified section to append necessary form data for the file
+                var uploadData = new FormData();
+                uploadData.append('csrfmiddlewaretoken', formData.get('csrfmiddlewaretoken'));
+                uploadData.append('image', file);
+                uploadData.append('editor_note', formData.get('editor_note'));
+                uploadData.append('services', formData.get('services'));
+                uploadData.append('scan_url', formData.get('scan_url'));
+                uploadData.append('photos_sent', formData.get('photos_sent'));
+                uploadData.append('photos_returned', formData.get('photos_returned'));
+                uploadData.append('relative_path', formData.get('relative_path'));
+                xhr.send(uploadData); // Send the modified upload data
+            });
+        }
+
+        function updateFileProgress(fileId, percentComplete) {
+            var progressBar = document.getElementById(`progressBar-${fileId}`);
+            var fileStatus = document.getElementById(`fileStatus-${fileId}`);
+            progressBar.style.width = percentComplete + '%';
+            fileStatus.textContent = percentComplete + '%';
+        }
+
+        function markFileComplete(fileId) {
+            var fileStatus = document.getElementById(`fileStatus-${fileId}`);
+            fileStatus.innerHTML = `<span style="color: green;">&#10003;</span>`;
+        }
+
+        async function submitFormWithoutFiles(formData, actionUrl) {
+            return new Promise((resolve, reject) => {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', actionUrl, true);
+                xhr.timeout = baseTimeout;
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        resolve();
+                    } else {
+                        reject(new Error('Error submitting form.'));
+                    }
+                };
+                xhr.onerror = function () {
+                    reject(new Error('Form submission failed.'));
+                };
+                xhr.ontimeout = function () {
+                    reject(new Error('Form submission timed out.'));
+                };
+                xhr.send(formData);
+            });
+        }
+    });
+</script>
+
+
+{% endblock %}

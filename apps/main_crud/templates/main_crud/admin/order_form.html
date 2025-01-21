@@ -1,0 +1,30 @@
+{% extends 'baseAdmin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="w-50 mr-auto ml-auto d-flex flex-wrap justify-content-between">
+  <h2 class="mr-4">{{ title }}</h2>
+  <a href="/admin/main_crud/order/import/" class="{{ class }} btn btn-primary mr-2 align-self-center">Import Orders</a>
+</div>
+<div class="w-50 mr-auto ml-auto mt-4" style="max-width: 900px;">
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-primary">{{ button }}</button>
+    <a href="{% url 'adminOrders--page' %}" class="btn btn-dark">Back</a>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      var dateInput = document.querySelector('input[type="datetime-local"]');
+
+      if (dateInput) {
+          dateInput.addEventListener('click', function() {
+              this.showPicker();
+          });
+      }
+  });
+</script>
+
+{% endblock %}

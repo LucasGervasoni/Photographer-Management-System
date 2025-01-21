@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load group_tags %}
+
+
+
+{% block title %}
+<title>Spotlight - Orders</title>
+{% endblock %}
+
+{% block content %}
+<style>
+.btnn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none; /* Impede qualquer interação */
+}
+
+  .status-circle {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.popup-header {
+  margin-bottom: 15px;
+}
+
+.popup-body {
+  margin-bottom: 20px;
+}
+
+.popup img {
+  width: 50px;
+  margin-bottom: 10px;
+}
+
+.popup button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.popup button:hover {
+  background-color: #45a049;
+}
+
+.d-none {
+  display: none;
+}
+
+#popup-error button {
+  background-color: #f44336;
+}
+
+#popup-error button:hover {
+  background-color: #e53935;
+}
+
+
+</style>
+
+<h2 class="mb-4">Your Orders:</h2>
+
+<!-- Filter form -->
+<form method="get" action="{% url 'userOrders--page' %}" class="mb-4">
+  <div class="row">
+    <div class="col-md-2">
+      <label for="status">Status</label>
+      <select name="status" id="status" class="form-control">
+        <option value="">All</option>
+        <option value="Not Uploaded">Not Uploaded</option>
+        <option value="Uploaded">Uploaded</option>
+        <option value="Production">Production</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label for="search">Search</label>
+      <input type="text" name="search" id="search" class="form-control" placeholder="Search...">
+    </div>
+    <div class="col-md-2">
+      <label for="start_date">Start Date</label>
+      <input type="date" name="start_date" id="start_date" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <label for="end_date">End Date</label>
+      <input type="date" name="end_date" id="end_date" class="form-control">
+    </div>
+    <div class="col-md-1">
+      <label>&nbsp;</label>
+      <button type="submit" class="btn btn-primary form-control">Filter</button>
+    </div>
+    {% if request.user.is_superuser or request.user|has_group:"Manager" or request.user|has_group:"Admin" %}
+    <div class="col-md-2 align-self-end">
+      <a href="{% url 'order-create' %}" class="btn btn-outline-primary">+ Create Order</a>
+    </div>
+    {% endif %}
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped">
+    <tr>
+      <th scope="col">
+        Photographer
+      </th>
+      <th scope="col">Scheduled</th>
+      <th scope="col">Address</th>
+      <th scope="col">Created At</th>
+      <th scope="col" colspan="2">Action</th>
+    </tr>
+    {% for order in object_list %}
+    <tr class="{% if order.order_status == 'Uploaded' %} text-primary 
+    {% elif order.order_status == 'Production' %} text-warning 
+    {% elif order.order_status == 'Completed' %} text-success 
+    {% endif %}">
+      <td>
+        <span title="{% if order.order_status == 'Uploaded' %} Uploaded 
+        {% elif order.order_status == 'Production' %} Production 
+        {% elif order.order_status == 'Completed' %} Completed 
+        {% endif %}" class="status-circle {% if order.order_status == 'Uploaded' %} bg-primary 
+      {% elif order.order_status == 'Production' %} bg-warning 
+      {% elif order.order_status == 'Completed' %} bg-success 
+      {% endif %}">
+      </span>
+        {{ order.appointment_team_members }}
+      </td>
+      <td>{{ order.appointment_date }}</td>
+      <td>{{ order.address }}</td>
+      <td>{{ order.order_created_at }}</td>
+      <td class="d-flex align-items-center justify-content-center">
+        <a href="{% url 'order_images' order.id %}" class="btn btn-outline-info mr-2">Assets</a>
+        {% if not request.user|has_group:"Editor" %}
+        <a onclick="info('listInfo')" class="btn btn-outline-info viewInfo" id="view">View</a>
+        {% endif %}
+        {% if request.user|has_group:"Editor" %}
+        <a href="#" class="btnn btn btn-outline-dark download-btn mr-2" data-order-id="{{ order.pk }}" data-order-address="{{ order.address }}">
+          Download
+        </a>
+        <a href="{% url 'order_image_upload_photographer' order.pk %}" class="btn btn-outline-secondary ml-2">Upload</a>
+        <a href="{% url 'order_images' order.id %}?filter=editor" class="btn btn-outline-info ml-2">View Edited</a>
+        {% endif %}
+        {% if request.user.is_superuser or request.user|has_group:"Photographer" or request.user|has_group:"Admin" or request.user|has_group:"Manager" %}
+        {% if order.order_status == "Uploaded" or order.order_status == "Production" or order.order_status == "Completed" %}
+        <a href="{% url 'order_image_upload_photographer' order.pk %}" class="btn btn-outline-secondary ml-2">+ Files</a>
+        {% else %}
+        <a href="{% url 'order_image_upload_photographer' order.pk %}" class="btn btn-outline-secondary ml-2 disabled">+ Files</a>
+        {% endif %}
+        {% if order.order_status == "Uploaded" or order.order_status == "Production" or order.order_status == "Completed" %}
+        <a href="{% url 'order_image_upload' order.id %}" class="btn btn-outline-secondary ml-2 disabled">Upload</a>
+        {% else %}
+        <a href="{% url 'order_image_upload' order.id %}" class="btn btn-outline-secondary ml-2 ">Upload</a>
+        {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    <tr class="d-none listInfo" id="listInfo">
+      <td>
+        <p class="text-capitalize"><strong>Customer:</strong> {{ order.customer }}</p>
+      </td>
+      {% if order.latest_scan_url and order.latest_scan_url != 'null' %}
+      <td>
+        <p><strong>Scan URL:</strong> <a href="{{ order.latest_scan_url }}" target="_blank">{{ order.latest_scan_url }}</a></p>
+      </td>
+      {% endif %}
+      <td>
+        <p class="text-capitalize"><strong>Services:</strong> {{ order.appointment_items|format_services }}</p>
+      </td>
+      <td>
+        {% if request.user.is_superuser or request.user|has_group:"Manager" or request.user|has_group:"Admin" %}
+        <form class="d-flex" data-order-id="{{ order.id }}" method="post" action="{% url 'update_order_status' order.id %}">
+          {% csrf_token %}
+          <label class="mt-2 mr-2" style="font-weight: bold;" for="order_status">Status:</label>
+          <select name="order_status" class="form-control" onchange="submitOrderStatusForm(this)">
+            <option value="Not Uploaded" {% if order.order_status == "Not Uploaded" %}selected{% endif %}>Not Uploaded</option>
+            <option value="Uploaded" {% if order.order_status == "Uploaded" %}selected{% endif %}>Uploaded</option>
+            <option value="Production" {% if order.order_status == "Production" %}selected{% endif %}>Production</option>
+            <option value="Completed" {% if order.order_status == "Completed" %}selected{% endif %}>Completed</option>
+          </select>
+        </form>
+        {% else %}
+        <p id="order-status-text-{{ order.id }}"><strong>Status:</strong> {{ order.order_status }}</p>
+        {% endif %}
+      </td>
+      {% if request.user.is_superuser or request.user|has_group:"Admin" or request.user|has_group:"Manager"  %}
+      <td id="assign-editor-wrapper-{{ order.id }}" class="{% if order.order_status != 'Production' and order.order_status != 'Completed' %}d-none{% endif %}">
+        <form method="post" action="{% url 'assign_order_editor' order.id %}">
+          {% csrf_token %}
+          <div class="form-group d-flex">
+            <select name="assigned_editor" id="assigned_editor" class="form-control">
+              <option value="" {% if not order.ordereditorassignment.assigned_editor_id %}selected{% endif %}>Select an Editor</option>
+              {% for editor in editors %}
+              <option value="{{ editor.id }}" {% if editor.id == order.ordereditorassignment.assigned_editor_id %}selected{% endif %}>
+                {{ editor.get_full_name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success" onclick="submitAssignEditorForm(this)">Assign Editor</button>
+        </form>
+      </td>
+      {% endif %}
+      <td colspan="2">
+    {% if request.user.is_superuser or request.user|has_group:"Admin" or request.user|has_group:"Manager" %}
+    {% if order.order_status == "Uploaded" or order.order_status == "Production" or order.order_status == "Completed" %}
+        <div class="download-section">
+            {% if order.has_edited_files %}
+            <select id="folder-select-{{ order.id }}" class="form-control mb-2">
+                <option value="default">Default Folder</option>
+                <option value="edited">Edited images</option>
+            </select>
+            {% endif %}
+            <a href="#" class="btnn btn btn-outline-dark download-btn mr-2" data-order-id="{{ order.pk }}" data-order-address="{{ order.address }}">
+                Download
+            </a>
+        </div>
+    {% else %}
+        <a href="#" class="btn btn-outline-dark disabled" aria-disabled="true">Download</a>
+    {% endif %}
+    {% endif %}
+</td>
+
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+
+<!-- Progress Pop-up -->
+<div id="popup-progress" class="popup d-none">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2>Your download is in progress...</h2>
+    </div>
+    <div class="popup-body">
+      <p>Please wait while we process your download.</p>
+      <!-- Bootstrap Spinner -->
+      <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Pop-up -->
+<div id="popup-success" class="popup d-none">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2>Success!</h2>
+    </div>
+    <div class="popup-body">
+      <p>Your download has been completed successfully!</p>
+      <button onclick="closePopup('popup-success')">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Error Pop-up -->
+<div id="popup-error" class="popup d-none">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2>Error!</h2>
+    </div>
+    <div class="popup-body">
+      <p>An error occurred during the download. Please try again.</p>
+      <button onclick="closePopup('popup-error')">Try Again</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="pagination">
+  <ul class="pagination">
+    {% if is_paginated %}
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page=1">&laquo; first</a></li>
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="current page-item">
+      <a class="page-link"> Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</a>
+    </li>
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a></li>
+    {% endif %}
+    {% endif %}
+  </ul>
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll('.download-btn').forEach(function (button) {
+    button.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        // Desabilitar o botão imediatamente ao clicar
+        button.disabled = true;
+        button.classList.add('disabled');  // Adiciona uma classe de desabilitado para garantir o estilo
+        button.textContent = "Downloading..."; // Atualiza o texto do botão para mostrar que o download está em andamento
+        
+        const orderId = this.getAttribute('data-order-id');
+        let downloadUrl = `/orders/${orderId}/download/`;
+  
+        // Verifica a pasta selecionada
+        const folderSelect = document.getElementById(`folder-select-${orderId}`);
+        let folderType = 'default';
+        if (folderSelect) {
+            folderType = folderSelect.value;
+        }
+
+        // Verifica o checkbox de exclusão de imagens marcadas como "selected_for_exclusion"
+        const excludeSelect = document.getElementById(`exclude-images-${orderId}`);
+        let excludeImages = 'false';  // Por padrão, não excluir
+        if (excludeSelect && excludeSelect.checked) {
+            excludeImages = 'true';
+        }
+
+        // Atualiza a URL final com os parâmetros de pasta e exclusão
+        const params = new URLSearchParams({
+            folder: folderType,
+            exclude: excludeImages
+        });
+        const finalDownloadUrl = `${downloadUrl}?${params.toString()}`;
+
+        const addressSafe = this.getAttribute('data-order-address');
+        const zipFilename = `order_${addressSafe}.zip`;
+
+        showPopup('popup-progress');
+
+        fetch(finalDownloadUrl)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Erro no download');
+                }
+            })
+            .then(data => {
+                if (data.url) {
+                    // Fecha o popup de progresso e exibe o popup de sucesso
+                    closePopup('popup-progress');
+                    showPopup('popup-success');
+
+                    // Cria um botão de download dinamicamente
+                    const newDownloadButton = document.createElement('a');
+                    newDownloadButton.href = data.url;
+                    newDownloadButton.download = zipFilename;
+                    newDownloadButton.style.display = 'none';
+
+                    // Adiciona o botão ao body
+                    document.body.appendChild(newDownloadButton);
+
+                    // Simula o clique no botão para disparar o download automaticamente
+                    newDownloadButton.click();
+
+                    // Remove o botão após o clique
+                    newDownloadButton.remove();
+                } else {
+                    throw new Error('URL não recebida');
+                }
+            })
+            .catch(error => {
+                closePopup('popup-progress');
+                showPopup('popup-error');
+            })
+            .finally(() => {
+                // Habilita o botão de download novamente após o download ou erro
+                button.disabled = false;
+                button.classList.remove('disabled');  // Remove a classe desabilitada para restaurar o estilo
+                button.textContent = "Download";  // Retorna o texto original do botão
+            });
+      });
+  });
+
+});
+
+
+
+
+    function showPopup(popupId) {
+      const popupElement = document.getElementById(popupId);
+      if (popupElement) {
+          popupElement.classList.remove('d-none');
+          console.log(`Showing ${popupId}`);
+      }
+    }
+  
+    function closePopup(popupId) {
+      const popupElement = document.getElementById(popupId);
+      if (popupElement) {
+          popupElement.classList.add('d-none');
+          console.log(`Closing ${popupId}`);
+      }
+    }
+  
+  function submitOrderStatusForm(selectElement) {
+      const form = selectElement.closest('form');
+      const orderId = form.getAttribute('data-order-id');
+      const formData = new FormData(form);
+  
+      fetch(form.action, {
+          method: 'POST',
+          headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+          },
+          body: formData
+      })
+      .then(response => {
+          if (!response.ok) {
+              throw new Error('Network response was not ok');
+          }
+          return response.json();
+      })
+      .then(data => {
+          // Mostrar um alerta de sucesso quando o status do pedido for atualizado
+          alert('Order status updated successfully!');
+  
+          // Mostrar ou ocultar o formulário de atribuição de editor com base no novo status
+          const assignEditorWrapper = document.getElementById(`assign-editor-wrapper-${orderId}`);
+          const selectedStatus = selectElement.value;
+  
+          if (selectedStatus === 'Production' || selectedStatus === 'Completed') {
+              assignEditorWrapper.classList.remove('d-none');
+          } else {
+              assignEditorWrapper.classList.add('d-none');
+          }
+      })
+      .catch(error => {
+          console.error('There was a problem with the fetch operation:', error);
+      });
+  }
+  
+  function submitAssignEditorForm(buttonElement) {
+      const form = buttonElement.closest('form');
+      const orderId = form.getAttribute('data-order-id');
+      const formData = new FormData(form);
+  
+      fetch(form.action, {
+          method: 'POST',
+          headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+          },
+          body: formData
+      })
+      .then(response => {
+          if (!response.ok) {
+              throw new Error('Network response was not ok');
+          }
+          return response.json();
+      })
+      .then(data => {
+          // Recarregar a página automaticamente após atribuir o editor
+          window.location.reload();
+      })
+      .catch(error => {
+          console.error('There was a problem with the fetch operation:', error);
+      });
+  }
+  
+  </script>
+  
+{% endblock %}

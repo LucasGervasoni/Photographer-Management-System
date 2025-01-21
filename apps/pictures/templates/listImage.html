@@ -1,0 +1,484 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% load group_tags %}
+
+{% block title%}
+<title>Spotlight - List Images</title>
+{% endblock %}
+
+{% block content %}
+<style>
+  .btnn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none; /* Impede qualquer interação */
+}
+
+.hidden{
+  display: none !important;
+}
+
+.popup-header {
+  margin-bottom: 15px;
+}
+
+.popup-body {
+  margin-bottom: 20px;
+}
+
+.popup img {
+  width: 50px;
+  margin-bottom: 10px;
+}
+
+.popup button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.popup button:hover {
+  background-color: #45a049;
+}
+
+.d-none {
+  display: none;
+}
+
+#popup-error button {
+  background-color: #f44336;
+}
+
+#popup-error button:hover {
+  background-color: #e53935;
+}
+
+
+  .blurred-image {
+    filter: blur(8px);
+    transition: filter 0.3s ease;
+}
+
+.image-checkbox {
+    width:20px;
+    height: 20px;
+    border: 2px solid #fff;  /* Adiciona uma borda branca para maior contraste */
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;  /* Garantir que o checkbox fique acima da imagem */
+}
+
+.image-container {
+    position: relative;
+}
+
+.selected {
+    filter: blur(8px);
+}
+
+</style>
+
+{% if request.user.is_superuser or request.user|has_group:"Admin" or request.user|has_group:"Manager" %}
+<div class="d-flex justify-content-between">
+  <h2 class="mb-4 h5">{{ order }}</h2>
+  <button id="cancel-selection-btn" class="btn btn-danger mb-3">Cancel all selection</button>
+</div>
+{% endif %}
+<hr>
+<br>
+<div class="d-flex justify-content-between flex-wrap" style="min-width: 300px;">
+  <div class="w-50">
+    {% if request.user.is_superuser or request.user|has_group:"Editor" or request.user|has_group:"Admin" or request.user|has_group:"Manager" %}
+    {% if order.orderimagegroup_set.exists %}
+    <h4>Editor Notes:</h4>
+    <div class="border pt-4 pb-4 col-md-6 mb-2">
+      {% for group in order.orderimagegroup_set.all %}
+      {% if group.editor_note and group.editor_note != "null" %}
+        <span class="card-body">{{ group.editor_note }}</span>
+      {% endif %}
+    {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    {% endif %}
+    {% if request.user.is_superuser or request.user|has_group:"Admin" or request.user|has_group:"Manager" %}
+    <form method="GET" action="">
+      <label for="folder-select">Filter:</label>
+      <select name="filter" id="folder-select" class="form-control mb-2" onchange="this.form.submit()">
+          <option value="">All Files</option>
+          <option value="editor" {% if request.GET.filter == "editor" %}selected{% endif %}>Editor-Uploaded Files</option>
+      </select>
+  </form>
+  {% endif %}
+  </div>
+</div>
+<br>
+
+<div class="container-fluid">
+  <div class="row flex-wrap-reverse">
+    <div class="col-lg-9 col-md-8 col-12">
+      <div class="row">
+        {% for image in page_obj %}
+        <div class="col-lg-4 col-md-6 col-sm-6 col-12 mb-3">
+            <div class="image-container" style="position: relative;">
+              {% if request.user.is_superuser or request.user|has_group:"Admin" or request.user|has_group:"Manager" %}
+                <input type="checkbox" class="image-checkbox" data-image-id="{{ image.id }}" 
+                      {% if image.selected_for_exclusion %} checked {% endif %} 
+                      style="position: absolute; top: 10px; left: 10px;">
+              {% endif %}
+                {% if image.selected_for_exclusion %}
+                    {% if image.converted_image %}
+                        <img src="{{ image.converted_image.url|replace:'/la.storage.bunnycdn.com/spot-storage,https://spotlight.b-cdn.net' }}"" class="img-fluid blurred-image" alt="Converted Image" loading="lazy">
+                    {% else %}
+                        <img src="{{ image.converted_image.url|replace:'/la.storage.bunnycdn.com/spot-storage,https://spotlight.b-cdn.net' }}"" class="img-fluid blurred-image" alt="Original Image" loading="lazy">
+                    {% endif %}
+                {% else %}
+                    {% if image.converted_image %}
+                        <img src="{{ image.converted_image.url|replace:'/la.storage.bunnycdn.com/spot-storage,https://spotlight.b-cdn.net' }}"" class="img-fluid" alt="Converted Image" loading="lazy">
+                    {% else %}
+                        <img src="{{ image.converted_image.url|replace:'/la.storage.bunnycdn.com/spot-storage,https://spotlight.b-cdn.net' }}"" class="img-fluid" alt="Original Image" loading="lazy">
+                    {% endif %}
+                {% endif %}
+                <small>{{ image.image.url|filename }}</small>
+            </div>
+        </div>
+        {% endfor %}
+      </div>
+      <!-- Controles de Paginação -->
+      <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+          </li>
+          {% endif %}
+
+          {% for num in page_obj.paginator.page_range %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          </li>
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    <div class="col-lg-3 col-md-4 col-12">
+      <div class="card" style="max-width: 335px;">
+        <div class="card-body">
+          <hr>
+          {% if page_obj and page_obj|length > 0 %}
+          <p class="card-text">Created date: <b>{{ page_obj.0.uploaded_at }}</b></p>
+          <hr>
+          <p class="card-text">Total uploaded files: <b>{{ image_count }}</b></p>
+          <hr>
+          <p class="card-text">Assets to be uploaded: <b>{{ page_obj.0.photos_sent }}</b></p>
+          <hr>
+          <p class="card-text">Assets to be returned: <b>{{ page_obj.0.photos_returned }}</b></p>
+          <hr>
+          {% else %}
+          <p>No images available.</p>
+          {% endif %}
+          <a class="btn btn-info btn-block" href="{% url 'userOrders--page' %}">Back to Orders</a>
+          {% if request.user.is_superuser or request.user|has_group:"Admin" or request.user|has_group:"Manager" %}
+          <h6 class="mt-2 mb-2">Choose the Original files or Edited files to be download</h6>
+          <select id="folder-select-{{ order.id }}" class="form-control mb-2">
+            <option value="default">Original images</option>
+            <option value="edited">Edited images</option>
+          </select>
+          <a href="#" class="btnn btn btn-outline-dark btn-block download-btn" data-order-id="{{ order.pk }}" data-order-address="{{ order.address }}">Download</a>
+          {% endif %}
+        </div>
+      </div>
+      {% if scan_url and scan_url != 'null' %}
+        <iframe width='335' height='440' src='{{ scan_url }}' frameborder='0' allowfullscreen allow='xr-spatial-tracking'></iframe>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Progress Pop-up -->
+<div id="popup-progress" class="popup hidden">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2>Your download is in progress...</h2>
+    </div>
+    <div class="popup-body">
+      <p>Please wait while we process your download.</p>
+      <!-- Bootstrap Spinner -->
+      <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Pop-up -->
+<div id="popup-success" class="popup hidden">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2>Success!</h2>
+    </div>
+    <div class="popup-body">
+      <p>Your download has been completed successfully!</p>
+      <button id="continue-btn" onclick="closePopup('popup-success')">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Error Pop-up -->
+<div id="popup-error" class="popup hidden">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2>Error!</h2>
+    </div>
+    <div class="popup-body">
+      <p>An error occurred during the download. Please try again.</p>
+      <button onclick="closePopup('popup-error')">Try Again</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.image-checkbox');
+    const cancelSelectionBtn = document.getElementById('cancel-selection-btn');
+
+    // Function to apply blur to checked images when the page loads
+    checkboxes.forEach(checkbox => {
+      const imageContainer = checkbox.closest('.image-container');
+      const image = imageContainer.querySelector('img');
+
+      // Automatically apply blur if the checkbox is checked when the page loads
+      if (checkbox.checked) {
+        image.classList.add('blurred-image');  
+      }
+
+      // Function to enable/disable blur on images when selected
+      checkbox.addEventListener('change', function() {
+        const imageId = this.dataset.imageId;
+
+        if (this.checked) {
+          image.classList.add('blurred-image');
+          updateSelection(imageId, true);  // Save the selection to the backend
+        } else {
+          image.classList.remove('blurred-image');
+          updateSelection(imageId, false);  // Remove the selection from the backend
+        }
+      });
+
+      // Add a click event to the image that checks/unchecks the checkbox
+      image.addEventListener('click', function() {
+        checkbox.checked = !checkbox.checked;  // Toggle the checkbox state
+
+        const imageId = checkbox.dataset.imageId;
+        
+        // Apply or remove blur depending on the checkbox state
+        if (checkbox.checked) {
+          this.classList.add('blurred-image');
+          updateSelection(imageId, true);  // Save the selection to the backend
+        } else {
+          this.classList.remove('blurred-image');
+          updateSelection(imageId, false);  // Remove the selection from the backend
+        }
+      });
+    });
+
+    // Function to cancel all selections
+    cancelSelectionBtn.addEventListener('click', function() {
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;  // Uncheck all checkboxes
+        const imageContainer = checkbox.closest('.image-container');
+        const image = imageContainer.querySelector('img');
+        image.classList.remove('blurred-image');  // Remove blur from all images
+        updateSelection(checkbox.dataset.imageId, false);  // Update all selections in the backend
+      });
+    });
+
+    // Function to send the selection to the backend via AJAX
+    function updateSelection(imageId, selected) {
+      fetch(`/toggle-image-selection/${imageId}/`, {  // Using imageId in the URL
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          'selected': selected
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status !== 'success') {
+          console.error('Failed to update selection');
+        }
+      })
+      .catch(error => console.error('Error:', error));
+    }
+
+    // Script for downloading selected images
+    document.querySelectorAll('.download-btn').forEach(function (button) {
+    button.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        // Desabilitar o botão imediatamente ao clicar
+        button.disabled = true;
+        button.classList.add('disabled');  // Adiciona uma classe de desabilitado para garantir o estilo
+        button.textContent = "Downloading..."; // Atualiza o texto do botão para mostrar que o download está em andamento
+        
+        const orderId = this.getAttribute('data-order-id');
+        let downloadUrl = `/orders/${orderId}/download/`;
+  
+        // Verifica a pasta selecionada
+        const folderSelect = document.getElementById(`folder-select-${orderId}`);
+        let folderType = 'default';
+        if (folderSelect) {
+            folderType = folderSelect.value;
+        }
+
+        // Verifica o checkbox de exclusão de imagens marcadas como "selected_for_exclusion"
+        const excludeSelect = document.getElementById(`exclude-images-${orderId}`);
+        let excludeImages = 'false';  // Por padrão, não excluir
+        if (excludeSelect && excludeSelect.checked) {
+            excludeImages = 'true';
+        }
+
+        // Atualiza a URL final com os parâmetros de pasta e exclusão
+        const params = new URLSearchParams({
+            folder: folderType,
+            exclude: excludeImages
+        });
+        const finalDownloadUrl = `${downloadUrl}?${params.toString()}`;
+
+        const addressSafe = this.getAttribute('data-order-address');
+        const zipFilename = `order_${addressSafe}.zip`;
+
+        showPopup('popup-progress');
+
+        fetch(finalDownloadUrl)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Erro no download');
+                }
+            })
+            .then(data => {
+                if (data.url) {
+                    // Fecha o popup de progresso e exibe o popup de sucesso
+                    closePopup('popup-progress');
+                    showPopup('popup-success');
+
+                    // Cria um botão de download dinamicamente
+                    const newDownloadButton = document.createElement('a');
+                    newDownloadButton.href = data.url;
+                    newDownloadButton.download = zipFilename;
+                    newDownloadButton.style.display = 'none';
+
+                    // Adiciona o botão ao body
+                    document.body.appendChild(newDownloadButton);
+
+                    // Simula o clique no botão para disparar o download automaticamente
+                    newDownloadButton.click();
+
+                    // Remove o botão após o clique
+                    newDownloadButton.remove();
+                } else {
+                    throw new Error('URL não recebida');
+                }
+            })
+            .catch(error => {
+                closePopup('popup-progress');
+                showPopup('popup-error');
+            })
+            .finally(() => {
+                // Habilita o botão de download novamente após o download ou erro
+                button.disabled = false;
+                button.classList.remove('disabled');  // Remove a classe desabilitada para restaurar o estilo
+                button.textContent = "Download";  // Retorna o texto original do botão
+            });
+      });
+  });
+
+
+    // Copy scan URL
+    document.querySelectorAll('.copy-scan-btn').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const orderId = this.getAttribute('data-order-id');
+        const urlElement = document.getElementById(`scan-url-${orderId}`);
+
+        // Create a temporary input element
+        const tempInput = document.createElement('input');
+        tempInput.style.position = 'absolute';
+        tempInput.style.left = '-9999px';
+        tempInput.value = urlElement.textContent;
+        document.body.appendChild(tempInput);
+
+        // Select the text and copy it to clipboard
+        tempInput.select();
+        document.execCommand('copy');
+
+        // Remove the temporary input
+        document.body.removeChild(tempInput);
+
+        // Change button appearance to show it's been copied
+        this.classList.add('copied-btn');
+        this.textContent = 'Copied';
+
+        // Optionally, disable the button after copying
+        this.disabled = true;
+      });
+    });
+
+  // Função para mostrar o pop-up
+  function showPopup(popupId) {
+    const popupElement = document.getElementById(popupId);
+    if (popupElement) {
+      popupElement.classList.remove('hidden');
+    } else {
+      console.error(`Popup com ID ${popupId} não encontrado.`);
+    }
+  }
+
+  // Função para fechar o pop-up
+  function closePopup(popupId) {
+    const popupElement = document.getElementById(popupId);
+    if (popupElement && !popupElement.classList.contains('hidden')) {
+      popupElement.classList.add('hidden');  // Adiciona a classe 'hidden' para esconder o modal
+    }
+  }
+
+  // Captura o evento de clique no botão "Continue"
+  const continueBtn = document.getElementById('continue-btn');
+  
+  // Verifique se o botão existe antes de adicionar o ouvinte de eventos
+  if (continueBtn) {
+    continueBtn.addEventListener('click', function() {
+      closePopup('popup-success');  // Fecha o modal de sucesso
+    });
+  } else {
+    console.error('Botão "Continue" não encontrado.');
+  }
+});
+</script>
+
+
+
+
+
+
+
+{% endblock %}

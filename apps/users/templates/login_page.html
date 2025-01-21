@@ -1,0 +1,42 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Ger Photography - login</title>
+  <link rel="stylesheet" href="{% static 'css/login_page.css' %}">
+  <link rel="shortcut icon" type="images/png" href="{% static 'img/icon-logo.png' %}">
+</head>
+<body>
+  <main id="main">
+
+    <section class="main__image--container">
+      <div class="main__image--content">
+        <img class="main__image--img" src="{% static 'img/home-login_page.webp' %}" alt="A photo of a modern house with green vegetation on its lawn and trees surrounding the house">
+      </div>
+    </section>
+
+    <section class="main__login--container">
+
+      <h1 class="main__login" >Ger Photography</h1>
+
+      <form id="main__login--form" class="main__login--form" method="post" action="">
+
+        {% csrf_token %}
+        <h2 class="main__login--title">Log In to your account</h2>
+
+        {% for field in form.visible_fields %}
+        <label for="{{ field.id_for_label }}">{{field.label}}</label>
+        {{ field }}
+        {% endfor %}
+        <button class="login__button" type="submit">Log In</button>
+
+      </form>
+    </section>
+  </main>
+</body>
+</html>
