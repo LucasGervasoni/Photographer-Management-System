@@ -45,7 +45,7 @@ Este projeto foi projetado para otimizar o fluxo de trabalho de uma empresa de f
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/seu-usuario/sistema-gerenciamento-fotografos.git
+   git clone https://github.com/LucasGervasoni/Photographer-Management-System.git
    cd sistema-gerenciamento-fotografos
    ```
 
@@ -66,14 +66,6 @@ Este projeto foi projetado para otimizar o fluxo de trabalho de uma empresa de f
 
 ---
 
-### 🗂️ **Roadmap**
-
-- Integração com sistemas externos de CRM.
-- Implementação de notificações em tempo real para uploads e downloads.
-- Relatórios e análises avançadas para Administradores.
-- Opções adicionais de provedores de armazenamento em nuvem.
-
----
 
 ---
 
