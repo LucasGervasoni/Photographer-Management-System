@@ -1,7 +1,8 @@
 - [Leia esta página em português](readme.pt.md)
 
 
-![login-page](https://github.com/user-attachments/assets/255afe78-38b6-4988-8049-c992047e3825)
+![GerPhotography](https://github.com/user-attachments/assets/e16112a3-2cbc-4070-b17d-d1a813a8618d)
+
 
 
 ## 📸 Photographer Management System
